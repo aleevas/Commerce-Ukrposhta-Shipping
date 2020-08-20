@@ -1,0 +1,13 @@
+commerce_ukrposhta.settings:
+  type: config_object
+  label: 'Ukrposhta settings'
+  mapping:
+    api_bearer_uuid:
+      type: string
+      label: 'API Bearer Uuid'
+    api_url:
+      type: string
+      label: 'API request Url'
+    language:
+      type: string
+      label: 'Language'

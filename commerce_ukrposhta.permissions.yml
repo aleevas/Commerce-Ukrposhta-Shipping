@@ -1,0 +1,3 @@
+administer commerce ukrposhta configuration:
+  title: 'Administer commerce ukrposhta configuration'
+  restrict access: true

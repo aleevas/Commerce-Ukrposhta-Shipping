@@ -1,0 +1,9 @@
+name: 'Commerce Ukrposhta'
+type: module
+description: Provides Ukrposhta integration with Commerce Shipping.'
+php: 7.1
+configure: commerce_ukrposhta.settings_form
+package: 'Commerce (shipping)'
+core_version_requirement: ^8.8 || ^9
+dependencies:
+  - commerce_shipping:commerce_shipping

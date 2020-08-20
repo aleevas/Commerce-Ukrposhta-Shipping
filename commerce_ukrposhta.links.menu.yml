@@ -1,0 +1,6 @@
+commerce_ukrposhta.ukrposhta_config_form:
+  title: 'Commerce Ukrposhta'
+  route_name: commerce_ukrposhta.settings_form
+  description: 'Configure Ukrposhta settings'
+  parent: system.admin_config_services
+  weight: 99

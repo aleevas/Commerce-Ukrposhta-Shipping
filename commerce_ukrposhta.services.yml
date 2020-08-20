@@ -1,0 +1,5 @@
+services:
+  commerce.ukrposhta.manager:
+    class: Drupal\commerce_ukrposhta\Service\UkrposhtaManager
+    arguments:
+      - '@config.factory'

@@ -11,3 +11,22 @@ commerce_ukrposhta.settings:
     language:
       type: string
       label: 'Language'
+
+field.storage_settings.ukrposhta:
+  type: mapping
+  label: 'Ukrposhta settings'
+  mapping:
+    max_length:
+      type: string
+      label: 'Max length'
+
+field.value.ukrposhta:
+  type: mapping
+  label: 'Ukrposhta'
+  mapping:
+    city:
+      type: string
+      label: 'City'
+    postoffice:
+      type: string
+      label: 'Post Office'

@@ -1,0 +1,145 @@
+<?php
+
+/**
+ * @file
+ * Provides Ukrposhta shipping functionality.
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\entity\BundleFieldDefinition;
+use Drupal\field\FieldStorageConfigInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter() for 'profile_type_form'.
+ */
+function commerce_ukrposhta_form_profile_type_form_alter(array &$form, FormStateInterface $form_state) {
+  // Attach Ukrposhta settings on form process, so Commerce settings should
+  // be already attached.
+  $form['#process'][] = 'commerce_ukrposhta_profile_type_form_process';
+
+  // Attach submit handler.
+  $form['actions']['submit']['#submit'][] = 'commerce_ukrposhta_profile_type_form_submit';
+}
+
+/**
+ * Form process handler for commerce_ukrposhta_form_profile_type_form_alter().
+ */
+function commerce_ukrposhta_profile_type_form_process(array $form, FormStateInterface $form_state) {
+  /** @var \Drupal\profile\Entity\ProfileTypeInterface $profile_type */
+  $profile_type = $form_state->getFormObject()->getEntity();
+  $ukrposhta_flag = $profile_type->getThirdPartySetting('commerce_order', 'ukrposhta_profile_type');
+  $address_has_data = FALSE;
+  if ($ukrposhta_flag && !$profile_type->isNew()) {
+    /** @var \Drupal\commerce\ConfigurableFieldManagerInterface $configurable_field_manager */
+    $configurable_field_manager = Drupal::service('commerce.configurable_field_manager');
+    $address_field_definition = commerce_ukrposhta_build_ukrposhta_field_definition($profile_type->id());
+    $address_has_data = $configurable_field_manager->hasData($address_field_definition);
+  }
+
+  $form['commerce_order']['ukrposhta_profile_type'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Profiles of this type includes Ukrposhta address'),
+    '#description' => t('Used to store the Ukrposhta shipping information.'),
+    '#default_value' => $ukrposhta_flag,
+    // The flag is always TRUE for the profile type provided by Commerce.
+    '#disabled' => $address_has_data,
+    '#weight' => $form['commerce_order']['#weight'] + 0.001,
+    '#states' => [
+      'visible' => [
+        ':input[name="commerce_order[customer_profile_type]"]' => ['checked' => TRUE],
+      ],
+    ],
+  ];
+
+  return $form;
+}
+
+/**
+ * Submission handler for commerce_ukrposhta_form_profile_type_form_alter().
+ */
+function commerce_ukrposhta_profile_type_form_submit(array $form, FormStateInterface $form_state) {
+  /** @var \Drupal\profile\Entity\ProfileTypeInterface $profile_type */
+  $profile_type = $form_state->getFormObject()->getEntity();
+  $ukrposhta_flag = $form_state->getValue([
+    'commerce_order',
+    'ukrposhta_profile_type',
+  ]);
+  $previous_ukrposhta_flag = $profile_type->getThirdPartySetting('commerce_order', 'ukrposhta_profile_type');
+  $customer_flag = $form_state->getValue([
+    'commerce_order',
+    'customer_profile_type',
+  ]);
+  if (!$customer_flag) {
+    $ukrposhta_flag = $customer_flag;
+  }
+  /** @var \Drupal\commerce\ConfigurableFieldManagerInterface $configurable_field_manager */
+  $configurable_field_manager = Drupal::service('commerce.configurable_field_manager');
+  $address_field_definition = commerce_ukrposhta_build_ukrposhta_field_definition($profile_type->id());
+  if ($ukrposhta_flag && !$previous_ukrposhta_flag) {
+    $configurable_field_manager->createField($address_field_definition, FALSE);
+  }
+  elseif (!$ukrposhta_flag && $previous_ukrposhta_flag) {
+    $configurable_field_manager->deleteField($address_field_definition);
+  }
+
+  $profile_type->setThirdPartySetting('commerce_order', 'ukrposhta_profile_type', $ukrposhta_flag);
+  $profile_type->save();
+}
+
+/**
+ * Builds the $profile->address_ukrposhta field definition.
+ *
+ * @param string $profile_type_id
+ *   The profile type ID.
+ *
+ * @return \Drupal\entity\BundleFieldDefinition
+ *   The field definition.
+ */
+function commerce_ukrposhta_build_ukrposhta_field_definition($profile_type_id) {
+  $address_field_definition = BundleFieldDefinition::create('ukrposhta')
+    ->setTargetEntityTypeId('profile')
+    ->setTargetBundle($profile_type_id)
+    ->setName('address_ukrposhta')
+    ->setLabel('Ukrposhta')
+    ->setRequired(TRUE)
+    ->setDisplayOptions('view', [
+      'label' => 'hidden',
+      'type' => 'ukrposhta_default',
+    ])
+    ->setDisplayOptions('form', [
+      'type' => 'ukrposhta_default',
+    ]);
+
+  return $address_field_definition;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access().
+ *
+ * Forbids the profile "address_ukrposhta" field from being deletable.
+ * This is an alternative to locking the field which still leaves
+ * the field editable.
+ */
+function commerce_ukrposhta_field_storage_config_access(FieldStorageConfigInterface $field_storage, $operation) {
+  if ($field_storage->id() === 'profile.address_ukrposhta' && $operation === 'delete') {
+    return AccessResult::forbidden();
+  }
+  return AccessResult::neutral();
+}
+
+/**
+ * Implements hook_entity_operation_alter().
+ *
+ * Hides the "Storage settings" operation for the profile "address_ukrposhta"
+ * field.
+ */
+function commerce_ukrposhta_entity_operation_alter(array &$operations, EntityInterface $entity) {
+  if ($entity->getEntityTypeId() == 'field_config') {
+    /** @var \Drupal\Core\Field\FieldConfigInterface $entity */
+    if ($entity->getTargetEntityTypeId() === 'profile' && $entity->getName() === 'address_ukrposhta') {
+      unset($operations['storage-settings']);
+    }
+  }
+}
